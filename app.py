@@ -15,8 +15,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-TOKEN = os.environ['TOKEN']
+ORIGINAL_REPO_URL = 'https://github.com/yu4u/age-estimation-pytorch'
+TITLE = 'yu4u/age-estimation-pytorch'
+DESCRIPTION = f'A demo for {ORIGINAL_REPO_URL}'
+ARTICLE = None
 
+TOKEN = os.environ['TOKEN']
 MODEL_REPO = 'hysts/yu4u-age-estimation-pytorch'
 MODEL_FILENAME = 'pretrained.pth'
 
@@ -140,20 +144,15 @@ def main():
     image_dir = pathlib.Path('sample_images')
     examples = [path.as_posix() for path in sorted(image_dir.glob('*.jpg'))]
 
-    repo_url = 'https://github.com/yu4u/age-estimation-pytorch'
-    title = 'yu4u/age-estimation-pytorch'
-    description = f'A demo for {repo_url}'
-    article = None
-
     gr.Interface(
         func,
         gr.inputs.Image(type='file', label='Input'),
         gr.outputs.Image(label='Output'),
-        theme=args.theme,
-        title=title,
-        description=description,
-        article=article,
         examples=examples,
+        title=TITLE,
+        description=DESCRIPTION,
+        article=ARTICLE,
+        theme=args.theme,
         allow_screenshot=args.allow_screenshot,
         allow_flagging=args.allow_flagging,
         live=args.live,
