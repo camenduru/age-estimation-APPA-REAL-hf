@@ -127,8 +127,6 @@ def predict(image, model, face_detector, device, margin=0.4, input_size=224):
 
 
 def main():
-    gr.close_all()
-
     args = parse_args()
     device = torch.device(args.device)
 
