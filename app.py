@@ -17,7 +17,7 @@ import torch.nn.functional as F
 
 ORIGINAL_REPO_URL = 'https://github.com/yu4u/age-estimation-pytorch'
 TITLE = 'yu4u/age-estimation-pytorch'
-DESCRIPTION = f'A demo for {ORIGINAL_REPO_URL}'
+DESCRIPTION = f'This is an unofficial demo for {ORIGINAL_REPO_URL}.'
 ARTICLE = None
 
 TOKEN = os.environ['TOKEN']
