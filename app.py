@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
 import functools
 import os
 import pathlib
@@ -15,27 +14,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-TITLE = 'yu4u/age-estimation-pytorch'
+TITLE = 'Age Estimation'
 DESCRIPTION = 'This is an unofficial demo for https://github.com/yu4u/age-estimation-pytorch.'
-ARTICLE = '<center><img src="https://visitor-badge.glitch.me/badge?page_id=hysts.age-estimation-appa-real" alt="visitor badge"/></center>'
 
-TOKEN = os.environ['TOKEN']
+HF_TOKEN = os.getenv('HF_TOKEN')
 MODEL_REPO = 'hysts/yu4u-age-estimation-pytorch'
 MODEL_FILENAME = 'pretrained.pth'
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--theme', type=str)
-    parser.add_argument('--live', action='store_true')
-    parser.add_argument('--share', action='store_true')
-    parser.add_argument('--port', type=int)
-    parser.add_argument('--disable-queue',
-                        dest='enable_queue',
-                        action='store_false')
-    parser.add_argument('--allow-flagging', type=str, default='never')
-    return parser.parse_args()
 
 
 def get_model(model_name='se_resnext50_32x4d',
@@ -52,7 +36,7 @@ def load_model(device):
     model = get_model(model_name='se_resnext50_32x4d', pretrained=None)
     path = huggingface_hub.hf_hub_download(MODEL_REPO,
                                            MODEL_FILENAME,
-                                           use_auth_token=TOKEN)
+                                           use_auth_token=HF_TOKEN)
     model.load_state_dict(torch.load(path))
     model = model.to(device)
     model.eval()
@@ -90,7 +74,7 @@ def draw_label(image,
 
 @torch.inference_mode()
 def predict(image, model, face_detector, device, margin=0.4, input_size=224):
-    image = cv2.imread(image.name, cv2.IMREAD_COLOR)[:, :, ::-1].copy()
+    image = cv2.imread(image, cv2.IMREAD_COLOR)[:, :, ::-1].copy()
     image_h, image_w = image.shape[:2]
 
     # detect faces using dlib detector
@@ -124,39 +108,22 @@ def predict(image, model, face_detector, device, margin=0.4, input_size=224):
     return image
 
 
-def main():
-    args = parse_args()
-    device = torch.device(args.device)
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+model = load_model(device)
+face_detector = dlib.get_frontal_face_detector()
+func = functools.partial(predict,
+                         model=model,
+                         face_detector=face_detector,
+                         device=device)
 
-    model = load_model(device)
-    face_detector = dlib.get_frontal_face_detector()
+image_dir = pathlib.Path('sample_images')
+examples = [path.as_posix() for path in sorted(image_dir.glob('*.jpg'))]
 
-    func = functools.partial(predict,
-                             model=model,
-                             face_detector=face_detector,
-                             device=device)
-    func = functools.update_wrapper(func, predict)
-
-    image_dir = pathlib.Path('sample_images')
-    examples = [path.as_posix() for path in sorted(image_dir.glob('*.jpg'))]
-
-    gr.Interface(
-        func,
-        gr.inputs.Image(type='file', label='Input'),
-        gr.outputs.Image(label='Output'),
-        examples=examples,
-        title=TITLE,
-        description=DESCRIPTION,
-        article=ARTICLE,
-        theme=args.theme,
-        allow_flagging=args.allow_flagging,
-        live=args.live,
-    ).launch(
-        enable_queue=args.enable_queue,
-        server_port=args.port,
-        share=args.share,
-    )
-
-
-if __name__ == '__main__':
-    main()
+gr.Interface(
+    fn=func,
+    inputs=gr.Image(label='Input', type='filepath'),
+    outputs=gr.Image(label='Output'),
+    examples=examples,
+    title=TITLE,
+    description=DESCRIPTION,
+).launch(show_api=False)
