@@ -14,12 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-TITLE = 'Age Estimation'
-DESCRIPTION = 'This is an unofficial demo for https://github.com/yu4u/age-estimation-pytorch.'
-
-HF_TOKEN = os.getenv('HF_TOKEN')
-MODEL_REPO = 'hysts/yu4u-age-estimation-pytorch'
-MODEL_FILENAME = 'pretrained.pth'
+DESCRIPTION = '# [Age Estimation](https://github.com/yu4u/age-estimation-pytorch)'
 
 
 def get_model(model_name='se_resnext50_32x4d',
@@ -34,9 +29,8 @@ def get_model(model_name='se_resnext50_32x4d',
 
 def load_model(device):
     model = get_model(model_name='se_resnext50_32x4d', pretrained=None)
-    path = huggingface_hub.hf_hub_download(MODEL_REPO,
-                                           MODEL_FILENAME,
-                                           use_auth_token=HF_TOKEN)
+    path = huggingface_hub.hf_hub_download(
+        'public-data/yu4u-age-estimation-pytorch', 'pretrained.pth')
     model.load_state_dict(torch.load(path))
     model = model.to(device)
     model.eval()
@@ -111,19 +105,27 @@ def predict(image, model, face_detector, device, margin=0.4, input_size=224):
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 model = load_model(device)
 face_detector = dlib.get_frontal_face_detector()
-func = functools.partial(predict,
-                         model=model,
-                         face_detector=face_detector,
-                         device=device)
+fn = functools.partial(predict,
+                       model=model,
+                       face_detector=face_detector,
+                       device=device)
 
 image_dir = pathlib.Path('sample_images')
 examples = [path.as_posix() for path in sorted(image_dir.glob('*.jpg'))]
 
-gr.Interface(
-    fn=func,
-    inputs=gr.Image(label='Input', type='filepath'),
-    outputs=gr.Image(label='Output'),
-    examples=examples,
-    title=TITLE,
-    description=DESCRIPTION,
-).launch(show_api=False)
+with gr.Blocks(css='style.css') as demo:
+    gr.Markdown(DESCRIPTION)
+    with gr.Row():
+        with gr.Column():
+            image = gr.Image(label='Input', type='filepath')
+            run_button = gr.Button('Run')
+        with gr.Column():
+            result = gr.Image(label='Result')
+
+    gr.Examples(examples=examples,
+                inputs=image,
+                outputs=result,
+                fn=fn,
+                cache_examples=os.getenv('CACHE_EXAMPLES') == '1')
+    run_button.click(fn=fn, inputs=image, outputs=result, api_name='predict')
+demo.queue(max_size=15).launch()
